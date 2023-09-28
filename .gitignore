@@ -1,0 +1,32 @@
+# Compiled Go binary files
+*.exe
+*.out
+*.o
+*.a
+
+# Dependency directories
+/vendor/
+/Godeps/
+/go.sum
+/go.mod
+
+# Output directories
+/bin/
+/pkg/
+/dist/
+
+# IDE/Editor specific files
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Compiled source code
+*.test
+
+# macOS specific files
+.DS_Store
+
+# Log files
+*.log
+
+.scannerwork/
