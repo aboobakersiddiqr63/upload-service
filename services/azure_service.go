@@ -17,7 +17,6 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 	var response models.Response
 
 	containerName := os.Getenv("STORAGE_CONTAINER_NAME")
-	connectionString := os.Getenv("STORAGE_ACCOUNT_CONN_STRING")
 
 	blobName := pdfFile.Header.Filename
 
@@ -39,12 +38,10 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 	}
 	defer file.Close()
 
-	// Upload to data to blob storage
 	fmt.Printf("Uploading a blob named %s\n", blobName)
 	ctx := context.Background()
 
-	client, _ := azblob.NewClientFromConnectionString(connectionString, nil)
-	_, err = client.UploadFile(ctx, containerName, blobName, file, &azblob.UploadBufferOptions{})
+	_, err = helper.Client.UploadFile(ctx, containerName, blobName, file, &azblob.UploadBufferOptions{})
 	if err != nil {
 		response.Data = "Error while uploading the temp file"
 		response.StatusCode = 400

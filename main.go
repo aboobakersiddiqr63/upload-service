@@ -11,8 +11,9 @@ import (
 
 func main() {
 	app := router.Router()
-	fmt.Println("Starting the server on port 4000")
+	fmt.Println("Starting the server on port 4001")
 	helper.InitLogger()
 	helper.InitDB()
+	helper.InitStorageConnection()
 	log.Fatal(http.ListenAndServe(":4001", app))
 }
