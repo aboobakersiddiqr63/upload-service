@@ -20,6 +20,15 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 
 	blobName := pdfFile.Header.Filename
 
+	isDataSetAldreadyUploaded := CheckIfDatasetAldreadyExist(pdfFile)
+
+	if isDataSetAldreadyUploaded.StatusCode != 200 {
+		response.Data = "Dataset with same title aldready exist"
+		response.StatusCode = 400
+		helper.Log.Errorln("Dataset with same title aldready exist")
+		return response
+	}
+
 	respConvertedPDF := convertMultiPartToPDF(pdfFile)
 
 	if respConvertedPDF.StatusCode != 200 {
@@ -125,4 +134,23 @@ func addDbEntryForUploadPDF(pdfFile models.PDFFileInput, blobName string) models
 	helper.Log.Infoln("Successfully added the record to the DB")
 
 	return response
+}
+
+func CheckIfDatasetAldreadyExist(pdfFile models.PDFFileInput) models.Response {
+
+	var response models.Response
+	var existingRecord models.PDFFileMetaData
+	err := helper.Db.Table("pdf_metadata").Where("email = ? AND title = ?", "test101@test.com", pdfFile.Title).First(&existingRecord).Error
+	if err != nil {
+		response.Data = "No records found"
+		response.StatusCode = 200
+		helper.Log.Infoln("Records Not found so we can add the pdf to Storage, err:", err)
+		return response
+	}
+
+	response.Data = "Record with same title exist"
+	response.StatusCode = 400
+	helper.Log.Infoln("Records with same title exist")
+	return response
+
 }
