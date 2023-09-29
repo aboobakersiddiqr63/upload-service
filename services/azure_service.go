@@ -3,9 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aboobakersiddiqr63/upload-service/helper"
@@ -16,16 +14,14 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 	helper.Log.Infoln("Entering into UploadPDFToAzureStorageAccount since the cloud provider is set as Azure, title:", pdfFile.Title)
 	var response models.Response
 
-	containerName := os.Getenv("STORAGE_CONTAINER_NAME")
-
 	blobName := pdfFile.Header.Filename
 
 	isDataSetAldreadyUploaded := CheckIfDatasetAldreadyExist(pdfFile)
 
 	if isDataSetAldreadyUploaded.StatusCode != 200 {
-		response.Data = "Dataset with same title aldready exist"
+		response.Data = "Dataset with same title/fileName aldready exist, Please change the fileName or the title of the dataset"
 		response.StatusCode = 400
-		helper.Log.Errorln("Dataset with same title aldready exist")
+		helper.Log.Errorln("Dataset with same titlefileName aldready exist")
 		return response
 	}
 
@@ -48,8 +44,9 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 	defer file.Close()
 
 	fmt.Printf("Uploading a blob named %s\n", blobName)
-	ctx := context.Background()
 
+	ctx := context.Background()
+	containerName := os.Getenv("STORAGE_CONTAINER_NAME")
 	_, err = helper.Client.UploadFile(ctx, containerName, blobName, file, &azblob.UploadBufferOptions{})
 	if err != nil {
 		response.Data = "Error while uploading the temp file"
@@ -76,81 +73,21 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 	return response
 }
 
-func convertMultiPartToPDF(pdfFile models.PDFFileInput) models.Response {
-	helper.Log.Infoln("Entering into convertMultiPartToPDF, title:", pdfFile.Title)
+func DeletePDFFromAzureStorageAccount(pdfFileMetadata models.PDFFileMetaData) models.Response {
 	var response models.Response
-	buffer, err := io.ReadAll(pdfFile.File)
-	if err != nil {
-		response.Data = "Error while reading the multipart form"
-		response.StatusCode = 400
 
-		helper.Log.Errorln("Error while reading the multipart form")
+	ctx := context.Background()
+	containerName := os.Getenv("STORAGE_CONTAINER_NAME")
+	_, err := helper.Client.DeleteBlob(ctx, containerName, pdfFileMetadata.StorageReference, nil)
+
+	if err != nil {
+		response.Data = fmt.Sprintln("Error while deleting the blob, err:", err)
+		response.StatusCode = 400
+		helper.Log.Errorln("Error while deleting the blob, err:", err)
 		return response
 	}
 
-	tempFile, err := os.CreateTemp("", "temp.pdf")
-	if err != nil {
-		response.Data = "Error while creating temp file"
-		response.StatusCode = 400
-
-		helper.Log.Errorln("Error while creating temp file")
-		return response
-	}
-	defer tempFile.Close()
-
-	_, err = tempFile.Write(buffer)
-	if err != nil {
-		response.Data = "Error while writing contents to the temporary file"
-		response.StatusCode = 400
-
-		helper.Log.Errorln("Error while writing contents to the temporary file:")
-		return response
-	}
-	response.Data = tempFile.Name()
+	response.Data = fmt.Sprintf("Blob named: %v has been successfully deleted", pdfFileMetadata.StorageReference)
 	response.StatusCode = 200
-
-	helper.Log.Infoln("Successfully converted multipart to pdf", response.Data)
 	return response
-}
-
-func addDbEntryForUploadPDF(pdfFile models.PDFFileInput, blobName string) models.Response {
-	helper.Log.Infoln("Entering into addDbEntryForUploadPDF for dataset:", pdfFile.Title)
-
-	var response models.Response
-	uploadPDFRecord := models.PDFFileMetaData{Email: "test101@test.com", Title: pdfFile.Title, Description: pdfFile.Description, UploadDate: time.Now(), StorageReference: blobName, DocumentID: "1"}
-
-	err := helper.Db.Table("pdf_metadata").Create(&uploadPDFRecord).Error
-
-	if err != nil {
-		helper.DbExceptionHandler(err, "Error while adding the entry for uploaded document")
-		response.Data = "Error while adding the entry for uploaded document"
-		response.StatusCode = 400
-		helper.Log.Errorln("Error while adding the entry for uploaded document in the DB")
-		return response
-	}
-
-	response.Data = "Successfully added the record to the table"
-	response.StatusCode = 200
-	helper.Log.Infoln("Successfully added the record to the DB")
-
-	return response
-}
-
-func CheckIfDatasetAldreadyExist(pdfFile models.PDFFileInput) models.Response {
-
-	var response models.Response
-	var existingRecord models.PDFFileMetaData
-	err := helper.Db.Table("pdf_metadata").Where("email = ? AND title = ?", "test101@test.com", pdfFile.Title).First(&existingRecord).Error
-	if err != nil {
-		response.Data = "No records found"
-		response.StatusCode = 200
-		helper.Log.Infoln("Records Not found so we can add the pdf to Storage, err:", err)
-		return response
-	}
-
-	response.Data = "Record with same title exist"
-	response.StatusCode = 400
-	helper.Log.Infoln("Records with same title exist")
-	return response
-
 }

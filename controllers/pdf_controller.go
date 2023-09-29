@@ -13,3 +13,9 @@ func UploadPDF(w http.ResponseWriter, r *http.Request) {
 	response := services.UploadPDF(r)
 	json.NewEncoder(w).Encode(&response)
 }
+
+func DeletePDF(w http.ResponseWriter, r *http.Request) {
+	helper.SetCommonHeaders(w, "DeletePDF")
+	response := services.DeletePDF(r)
+	json.NewEncoder(w).Encode(&response)
+}

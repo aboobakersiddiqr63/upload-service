@@ -6,4 +6,5 @@ CREATE TABLE pdf_metadata (
     upload_date TIMESTAMPTZ,
     document_id VARCHAR(255) NOT NULL,
     storage_reference VARCHAR(255) NOT NULL
+    isdeleted BOOLEAN NOT NULL
 );

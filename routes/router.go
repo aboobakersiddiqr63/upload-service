@@ -10,6 +10,8 @@ func Router() *mux.Router {
 
 	//routes
 	router.HandleFunc("/api/upload-service/pdf/upload", controllers.UploadPDF).Methods("POST")
+	router.HandleFunc("/api/upload-service/pdf/delete", controllers.DeletePDF).Methods("DELETE")
+
 	// router.HandleFunc("/api/auth-service/login", controllers.LoginUser).Methods("POST")
 	return router
 

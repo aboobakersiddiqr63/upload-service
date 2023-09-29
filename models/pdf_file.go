@@ -20,4 +20,6 @@ type PDFFileMetaData struct {
 	UploadDate       time.Time `json:"upload_date"`
 	DocumentID       string    `json:"document_id"`
 	StorageReference string    `json:"storage_reference"`
+	LastModifiedDate time.Time `json:"last_modified_date"`
+	Isdeleted        bool      `json:"isdeleted"`
 }
