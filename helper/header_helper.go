@@ -13,7 +13,11 @@ func SetCommonHeaders(w http.ResponseWriter, method string) {
 	w.Header().Set("Access-Control-Allow-Headers", contentTypeKeyStr)
 }
 
-func GetCommonHeaders(w http.ResponseWriter) {
+func GetCommonHeaders(w http.ResponseWriter, method string) {
 	w.Header().Set(contentTypeKeyStr, "application/x-www-form-urlencoded")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+}
+
+func GetPDFCommonHeaders(w http.ResponseWriter, method string) {
+	w.Header().Set("Content-Type", "application/pdf")
 }

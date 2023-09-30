@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -16,7 +17,7 @@ func UploadPDFToAzureStorageAccount(pdfFile models.PDFFileInput) models.Response
 
 	blobName := pdfFile.Header.Filename
 
-	isDataSetAldreadyUploaded := CheckIfDatasetAldreadyExist(pdfFile)
+	isDataSetAldreadyUploaded := checkIfDatasetAldreadyExist(pdfFile)
 
 	if isDataSetAldreadyUploaded.StatusCode != 200 {
 		response.Data = "Dataset with same title/fileName aldready exist, Please change the fileName or the title of the dataset"
@@ -90,4 +91,24 @@ func DeletePDFFromAzureStorageAccount(pdfFileMetadata models.PDFFileMetaData) mo
 	response.Data = fmt.Sprintf("Blob named: %v has been successfully deleted", pdfFileMetadata.StorageReference)
 	response.StatusCode = 200
 	return response
+}
+
+func downloadBlobFromStorageAccount(pdfFileMetadata models.PDFFileMetaData) []byte {
+	containerName := os.Getenv("STORAGE_CONTAINER_NAME")
+	ctx := context.Background()
+
+	pdfIntResp, pdfDownloadError := helper.Client.DownloadStream(ctx, containerName, pdfFileMetadata.StorageReference, nil)
+	if pdfDownloadError != nil {
+		helper.Log.Errorf("Error while downloading the pdf from the storage account for the dataset: %v", pdfFileMetadata.Title)
+		return nil
+	}
+
+	pdfFile, err := io.ReadAll(pdfIntResp.Body)
+	if err != nil {
+		helper.Log.Errorf("Error while converting the pdfData")
+		return nil
+	}
+
+	helper.Log.Infof("Successfully Downloaded the pdf for the dataset %v", pdfFileMetadata.Title)
+	return pdfFile
 }

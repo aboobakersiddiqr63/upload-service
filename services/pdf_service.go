@@ -146,11 +146,11 @@ func addDbEntryForUploadPDF(pdfFile models.PDFFileInput, blobName string) models
 	return response
 }
 
-func CheckIfDatasetAldreadyExist(pdfFile models.PDFFileInput) models.Response {
+func checkIfDatasetAldreadyExist(pdfFile models.PDFFileInput) models.Response {
 
 	var response models.Response
 	var existingRecord models.PDFFileMetaData
-	err := helper.Db.Table("pdf_metadata").Where("email = ? AND (title = ? OR storage_reference = ?)", "test101@test.com", pdfFile.Title, pdfFile.Header.Filename).First(&existingRecord).Error
+	err := helper.Db.Table("pdf_metadata").Where("email = ? AND (title = ? OR storage_reference = ?) AND isdeleted = false", "test101@test.com", pdfFile.Title, pdfFile.Header.Filename).First(&existingRecord).Error
 	if err != nil {
 		response.Data = "No records found"
 		response.StatusCode = 200
@@ -172,7 +172,8 @@ func DeletePDF(r *http.Request) models.Response {
 
 	metadataResp, metaDataError := getBlobMetaDataDetailsFromDb(titleParam)
 	if metaDataError != nil {
-		response.Data = fmt.Sprintf("Error while getting the metadata from DB or the metadata for the dataset %v doesnot exist", titleParam)
+		errResp := fmt.Sprintf("Error while getting the metadata from DB or the metadata for the dataset %v doesnot exist", titleParam)
+		response.Data = errResp
 		response.StatusCode = 400
 		return response
 	}
@@ -193,7 +194,7 @@ func getTitleParamFromRequest(r *http.Request) string {
 func getBlobMetaDataDetailsFromDb(titleParam string) (models.PDFFileMetaData, error) {
 	var response models.PDFFileMetaData
 
-	err := helper.Db.Table("pdf_metadata").Where("email = ? AND title = ?", "test101@test.com", titleParam).First(&response).Error
+	err := helper.Db.Table("pdf_metadata").Where("email = ? AND title = ? and isdeleted = false", "test101@test.com", titleParam).First(&response).Error
 	if err != nil {
 		helper.DbExceptionHandler(err, "Error while getting the meta data from DB")
 		helper.Log.Errorf("Error while getting the metadata from DB or the metadata for the dataset %v doesnot exist", titleParam)
@@ -219,6 +220,52 @@ func updateDbAfterDeletionOfDataSet(pdfFileMetadata models.PDFFileMetaData) mode
 
 	helper.Log.Infof("Successfully updated the flag isDeleted in the DB for the dataset: %v", pdfFileMetadata.StorageReference)
 	response.Data = fmt.Sprintf("Successfully updated the flag isDeleted in the DB for the dataset: %v", pdfFileMetadata.StorageReference)
+	response.StatusCode = 200
+	return response
+}
+
+func DownloadPDF(r *http.Request) ([]byte, models.Response) {
+	var response models.Response
+	titleParam := r.URL.Query().Get("title")
+	metadataResp, metaDataError := getBlobMetaDataDetailsFromDb(titleParam)
+	if metaDataError != nil {
+		response.Data = fmt.Sprintf("Error while getting the metadata from DB or the metadata for the dataset %v", titleParam)
+		response.StatusCode = 400
+		return nil, response
+	}
+
+	pdfFile := downloadBlobFromStorageAccount(metadataResp)
+	if pdfFile == nil {
+		response.Data = "Error downloading the PDF from the Data store"
+		response.StatusCode = 400
+		return nil, response
+	}
+
+	response.Data = "Success"
+	response.StatusCode = 200
+	return pdfFile, response
+}
+
+func GetAllPDFMetadata() models.AllPDFMetaDataResponse {
+	response := getAllActivePDFMetadataFromDB()
+	return response
+}
+
+func getAllActivePDFMetadataFromDB() models.AllPDFMetaDataResponse {
+	result := []models.PDFFileMetaData{}
+	var response models.AllPDFMetaDataResponse
+	err := helper.Db.Table("pdf_metadata").Where("email = ? AND isdeleted = false", "test101@test.com").Find(&result).Error
+
+	if err != nil {
+		helper.DbExceptionHandler(err, "Error while fetching the Data from the DB")
+		helper.Log.Infof("Error while fetching the Data from the DB")
+		response.Data = nil
+		response.StatusCode = 400
+		return response
+	}
+
+	helper.Log.Infoln("Successfully fetched the all pdf's metadata from DB")
+	response.Data = result
 	response.StatusCode = 200
 	return response
 }

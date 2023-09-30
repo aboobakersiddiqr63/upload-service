@@ -19,3 +19,16 @@ func DeletePDF(w http.ResponseWriter, r *http.Request) {
 	response := services.DeletePDF(r)
 	json.NewEncoder(w).Encode(&response)
 }
+
+func DownloadPDF(w http.ResponseWriter, r *http.Request) {
+	helper.GetPDFCommonHeaders(w, "DownloadPDF")
+	resPDF, response := services.DownloadPDF(r)
+	json.NewEncoder(w).Encode(&response)
+	w.Write(resPDF)
+}
+
+func GetAllPDFMetadata(w http.ResponseWriter, r *http.Request) {
+	helper.GetCommonHeaders(w, "GetAllPDFMetadata")
+	response := services.GetAllPDFMetadata()
+	json.NewEncoder(w).Encode(&response)
+}
